@@ -1,6 +1,6 @@
 # Sota (Simple One Time Authenticator)
 
-[![version](https://badge.fury.io/gh/febras%2fsota.svg)](https://badge.fury.io/gh/febras%2fsota.svg)
+[![GitHub release](https://img.shields.io/github/v/release/febras/sota?color=blue&style=flat)](https://github.com/febras/sota/releases)
 [![contributions](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/febras/sota/issues)
 
 <img src="https://raw.githubusercontent.com/FebraS/sota/refs/heads/main/assets/Screenshot%202026-08-25%20002312.png" alt="Sota">
