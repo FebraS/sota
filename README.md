@@ -1,5 +1,10 @@
 # Sota (Simple One Time Authenticator)
 
+[![version](https://badge.fury.io/gh/febras%2fsota.svg)](https://badge.fury.io/gh/febras%2fsota.svg)
+[![contributions](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/febras/sota/issues)
+
+<img src="https://raw.githubusercontent.com/FebraS/sota/refs/heads/main/assets/Screenshot%202026-08-25%20002312.png" alt="Sota">
+
 Sota is a high-performance command-line utility built in Go for managing and decoding multi-account migration QR codes.
 
 It is built using Go for fast execution, but it relies on a Python script under the hood to actually scan the QR code. We use this hybrid approach because standard Go libraries often struggle to read highly dense QR codes, while Python's `pyzbar` library can read them perfectly.
