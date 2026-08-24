@@ -1,0 +1,3 @@
+# Example
+otpauth://totp/victim@gmail.com?secret=JBSWY3DPEHPK3PXP&issuer=Google
+otpauth://totp/GitHub:Victim?secret=JBSZANDPEHPK3PXP&issuer=GitHub
