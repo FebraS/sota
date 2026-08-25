@@ -1,18 +1,19 @@
 package cli
 
 import (
-	"bufio"
 	"fmt"
 	"net/url"
 	"os"
-	"os/signal"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/atotto/clipboard"
+	"github.com/charmbracelet/bubbles/progress"
+	"github.com/charmbracelet/bubbles/textinput"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
@@ -25,13 +26,194 @@ import (
 
 var (
 	readFile        string
-	interactive     bool
-	search          string
 	importMigration []string
 	outputFile      string
 	generateYkman   string
 	exportFile      string
 )
+
+var (
+	baseStyle     = lipgloss.NewStyle().Margin(1, 2)
+	titleStyle    = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("39"))
+	itemStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("252"))
+	selectedStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("42")).Bold(true).PaddingLeft(2).Border(lipgloss.NormalBorder(), false, false, false, true).BorderForeground(lipgloss.Color("42"))
+	otpStyle      = lipgloss.NewStyle().Foreground(lipgloss.Color("42")).Bold(true)
+	msgStyle      = lipgloss.NewStyle().Foreground(lipgloss.Color("204")).MarginTop(1)
+	progressStyle = lipgloss.NewStyle().MarginTop(1)
+)
+
+type tickMsg time.Time
+
+type model struct {
+	accounts    []otp.Account
+	filtered    []otp.Account // Accounts displayed after filtering
+	cursor      int
+	message     string
+	progress    progress.Model
+	maxNameLen  int
+	textInput   textinput.Model // Search input component
+	isSearching bool            // Indicator for typing mode
+}
+
+func initialModel(accs []otp.Account) model {
+	maxLen := 0
+	for _, a := range accs {
+		if len(a.Name) > maxLen {
+			maxLen = len(a.Name)
+		}
+	}
+
+	prog := progress.New(
+		progress.WithDefaultGradient(),
+		progress.WithoutPercentage(),
+	)
+
+	ti := textinput.New()
+	ti.Placeholder = "Find account name..."
+	ti.CharLimit = 50
+	ti.Width = 30
+
+	return model{
+		accounts:    accs,
+		filtered:    accs, // Initially display all accounts
+		progress:    prog,
+		maxNameLen:  maxLen,
+		textInput:   ti,
+		isSearching: false,
+	}
+}
+
+func (m model) Init() tea.Cmd {
+	// Run tick and cursor blink simultaneously
+	return tea.Batch(tickCmd(), textinput.Blink)
+}
+
+func tickCmd() tea.Cmd {
+	return tea.Tick(time.Second, func(t time.Time) tea.Msg {
+		return tickMsg(t)
+	})
+}
+
+func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+	var cmds []tea.Cmd
+
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		// IF IN SEARCH MODE
+		if m.isSearching {
+			switch msg.String() {
+			case "esc", "enter": // Exit search mode
+				m.isSearching = false
+				m.textInput.Blur()
+				return m, nil
+			}
+
+			// Insert typing input into textInput
+			m.textInput, cmd = m.textInput.Update(msg)
+			cmds = append(cmds, cmd)
+
+			// Process filtering in real-time
+			term := strings.ToLower(m.textInput.Value())
+			m.filtered = nil
+			for _, acc := range m.accounts {
+				if term == "" || strings.Contains(strings.ToLower(acc.Name), term) {
+					m.filtered = append(m.filtered, acc)
+				}
+			}
+			m.cursor = 0 // Reset cursor to the top after searching
+			return m, tea.Batch(cmds...)
+		}
+
+		// IF IN NORMAL NAVIGATION MODE
+		switch msg.String() {
+		case "ctrl+c", "q":
+			return m, tea.Quit
+		case "up", "k":
+			if len(m.filtered) > 0 {
+				m.cursor = (m.cursor - 1 + len(m.filtered)) % len(m.filtered)
+			}
+			m.message = ""
+		case "down", "j":
+			if len(m.filtered) > 0 {
+				m.cursor = (m.cursor + 1) % len(m.filtered)
+			}
+			m.message = ""
+		case "/": // Press slash (/) to start searching
+			m.isSearching = true
+			m.textInput.Focus()
+			m.message = ""
+			return m, textinput.Blink
+		case "enter":
+			if len(m.filtered) > 0 {
+				selectedOtp := m.filtered[m.cursor].TotpObj.Now()
+				clipboard.WriteAll(selectedOtp)
+				m.message = fmt.Sprintf("Copied OTP for %s!", m.filtered[m.cursor].Name)
+			}
+		}
+
+	case tickMsg:
+		cmds = append(cmds, tickCmd())
+	}
+
+	// Catch all non-key events (like cursor Blink) to textInput
+	if m.isSearching {
+		m.textInput, cmd = m.textInput.Update(msg)
+		cmds = append(cmds, cmd)
+	}
+
+	return m, tea.Batch(cmds...)
+}
+
+func (m model) View() string {
+	s := titleStyle.Render("SOTA - Simple One Time Authenticator") + "\n"
+
+	// Dynamic Help Text
+	helpText := "Use arrows to navigate, Enter to copy, / to search, q to quit."
+	if m.isSearching {
+		helpText = "Type to search, Enter or Esc to finish."
+	}
+	s += lipgloss.NewStyle().Foreground(lipgloss.Color("241")).Render(helpText) + "\n\n"
+
+	// Display search bar if it is active or has a value
+	if m.isSearching || m.textInput.Value() != "" {
+		s += m.textInput.View() + "\n\n"
+	}
+
+	//
+	if len(m.filtered) == 0 {
+		s += "No accounts found.\n"
+	} else {
+		for i, acc := range m.filtered {
+			currentOtp := acc.TotpObj.Now()
+			namePadded := fmt.Sprintf("%-*s", m.maxNameLen, acc.Name)
+
+			// List numbering (i+1) with 2-digit padding
+			row := fmt.Sprintf("%2d. [%s] OTP: %s", i+1, namePadded, otpStyle.Render(currentOtp))
+
+			if m.cursor == i {
+				s += selectedStyle.Render(row) + "\n"
+			} else {
+				s += itemStyle.Render(row) + "\n"
+			}
+		}
+	}
+
+	// Render time progress
+	now := time.Now().Unix()
+	remainingSeconds := 30 - (now % 30)
+	remainingRatio := float64(remainingSeconds) / 30.0
+
+	barStr := m.progress.ViewAs(remainingRatio)
+	s += "\n" + progressStyle.Render(fmt.Sprintf("%s %2ds", barStr, remainingSeconds)) + "\n"
+
+	// Render Notification message
+	if m.message != "" {
+		s += msgStyle.Render(m.message) + "\n"
+	}
+
+	return baseStyle.Render(s)
+}
 
 var rootCmd = &cobra.Command{
 	Use:   "sota",
@@ -130,108 +312,11 @@ var rootCmd = &cobra.Command{
 			return
 		}
 
-		// Filter by search
-		if search != "" {
-			var filtered []otp.Account
-			s := strings.ToLower(search)
-			for _, acc := range accounts {
-				if strings.Contains(strings.ToLower(acc.Name), s) {
-					filtered = append(filtered, acc)
-				}
-			}
-			accounts = filtered
-			if len(accounts) == 0 {
-				fmt.Printf("No accounts found matching '%s'.\n", search)
-				return
-			}
-		}
-
-		fmt.Printf("%d accounts loaded from '%s'.\n\n", len(accounts), readFile)
-		maxNameLen := 0
-		for _, acc := range accounts {
-			if len(acc.Name) > maxNameLen {
-				maxNameLen = len(acc.Name)
-			}
-		}
-
-		// 5. Interactive Mode
-		if interactive {
-			fmt.Println("Interactive Mode Enabled. Choose an account to copy its OTP.\n")
-			for i, acc := range accounts {
-				paddedName := fmt.Sprintf("[%d] %-*s", i+1, maxNameLen, acc.Name)
-				fmt.Printf("%s: %s\n", paddedName, acc.TotpObj.Now())
-			}
-
-			reader := bufio.NewReader(os.Stdin)
-			for {
-				fmt.Print("\nEnter account number to copy OTP (or 0 to exit): ")
-				input, _ := reader.ReadString('\n')
-				input = strings.TrimSpace(input)
-
-				choice, err := strconv.Atoi(input)
-				if err != nil {
-					fmt.Println("Invalid input. Please enter a number.")
-					continue
-				}
-
-				if choice == 0 {
-					break
-				}
-				if choice >= 1 && choice <= len(accounts) {
-					selectedOtp := accounts[choice-1].TotpObj.Now()
-					clipboard.WriteAll(selectedOtp)
-					fmt.Printf("\nOTP for '%s' (%s) copied to clipboard!\n", accounts[choice-1].Name, selectedOtp)
-				} else {
-					fmt.Println("Invalid choice.")
-				}
-			}
-			return
-		}
-
-		// 6. Live Mode (Default)
-		c := make(chan os.Signal, 1)
-		signal.Notify(c, os.Interrupt)
-		go func() {
-			<-c
-			color.Red("\n\nProgram stopped.")
-			os.Exit(0)
-		}()
-
-		previousOtps := make(map[string]string)
-		for {
-			now := time.Now().Unix()
-			remainingSeconds := 30 - (now % 30)
-
-			currentOtps := make(map[string]string)
-			otpChanged := false
-
-			for _, acc := range accounts {
-				token := acc.TotpObj.Now()
-				currentOtps[acc.Name] = token
-				if prev, exists := previousOtps[acc.Name]; !exists || prev != token {
-					otpChanged = true
-				}
-			}
-
-			if otpChanged {
-				terminal.Clear()
-				terminal.Banner()
-				fmt.Printf("%d accounts loaded from '%s'.\n\n", len(accounts), readFile)
-
-				for _, acc := range accounts {
-					paddedName := fmt.Sprintf("[%s]", acc.Name)
-					fmt.Printf("%-*s OTP: %s\n", maxNameLen+2, paddedName, color.HiGreenString(currentOtps[acc.Name]))
-				}
-				fmt.Println()
-
-				if len(accounts) > 0 {
-					clipboard.WriteAll(accounts[0].TotpObj.Now())
-				}
-				previousOtps = currentOtps
-			}
-
-			fmt.Printf("\rRemaining Time: %ds          ", remainingSeconds)
-			time.Sleep(1 * time.Second)
+		// 5. Run UI Bubble Tea (SUDAH DIUBAH: Menghapus tea.WithAltScreen() agar Banner terlihat)
+		p := tea.NewProgram(initialModel(accounts))
+		if _, err := p.Run(); err != nil {
+			fmt.Printf("Error running TUI: %v\n", err)
+			os.Exit(1)
 		}
 	},
 }
@@ -245,8 +330,6 @@ func Execute() {
 
 func init() {
 	rootCmd.Flags().StringVarP(&readFile, "read", "r", "accounts.txt", "Specify the file to read account URIs from.")
-	rootCmd.Flags().BoolVarP(&interactive, "interactive", "t", false, "Enable interactive mode to select which OTP to copy.")
-	rootCmd.Flags().StringVarP(&search, "search", "s", "", "Search for accounts by name.")
 	rootCmd.Flags().StringSliceVarP(&importMigration, "import-migration", "i", nil, "Import accounts from a QR code, migration URI, or OTP URI.")
 	rootCmd.Flags().StringVarP(&outputFile, "output-file", "o", "", "Specify the output file to write the decoded URIs.")
 	rootCmd.Flags().StringVarP(&generateYkman, "generate-ykman", "g", "", "Generate ykman commands directly from a migration QR code or URI.")

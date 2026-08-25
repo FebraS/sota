@@ -69,8 +69,6 @@ Sota includes several arguments for control and flexibility during execution.
 |`--output-file <filename.txt>`	| Use with --import-migration to save the imported URIs to a custom file. |
 |`--generate-ykman <path_to_image>`	| Converts URIs from a QR code into ready-to-run ykman commands for YubiKey. |
 |`--export <filename.txt>`	| Generates individual QR code images for each account in the specified file (defaults to accounts.txt). |
-|`--interactive`	| Runs in interactive mode, allowing you to choose which account's OTP to copy. |
-|`--search <keyword>`	| Filters and displays the OTP only for accounts that match your keyword. |
 |`--read <filename.txt>`	| Loads accounts from a custom file instead of accounts.txt. |
 |`--help`	| Displays a brief description of the program and all available arguments. |
 
