@@ -33,9 +33,6 @@ Installing dependencies directly via your Linux package manager ensures that all
 sudo apt update && sudo apt install -y python3-pyzbar python3-pillow
 ```
 
-**Important Note for Linux Users:** 
-You may need to install the ZBar C-library package on your system before pyzbar can function properly.
-
 * **Arch**:
 ```bash
 sudo pacman -S python-pyzbar python-pillow
@@ -121,7 +118,7 @@ Run the compiled application by pointing it to your QR code image and specifying
 ```bash
 ./sota -i qrcode.jpeg -o accounts.txt
 ```
-(On Windows, use sota.exe -i qrcode.jpeg -o accounts.txt)
+(On Windows, use .\build\sota-windows-amd64.exe -i qrcode.jpeg -o accounts.txt or point directly to the downloaded executable).
 
 If the extraction is successful, your URIs will be cleanly formatted and saved inside accounts.txt.
 
