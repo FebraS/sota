@@ -66,17 +66,54 @@ sudo pacman -S zbar
 ```
 
 ## Setup and Installation
-1. Clone the RepositoryDownload the project to your local machine:
+
+### Option 1: Download Pre-compiled Binary (Fastest)
+You don't need to build from source! Download the latest ready-to-use binary for your OS from the Releases page:
+
+1. Go to [Sota Releases](https://github.com/febras/sota/releases).
+2. Download the appropriate binary for your system (Windows, macOS, or Linux).
+3. Place the executable in your working directory.
+
+---
+
+### Option 2: Build from Source
+
+First, clone the repository:
 ```bash
 git clone https://github.com/febras/sota.git
-
 cd sota
 ```
-2. Build the ApplicationCompile the Go code into a single executable binary:
+
+If you prefer to compile the application yourself:
+
+**Using Make (Recommended)**
+You can use the provided Makefile to quickly build or clean the project:
+
+**Build binary for your current OS:**
+
 ```bash
-go build -o sota main.go
+make build
 ```
-(This will generate a sota executable file, or sota.exe on Windows).
+(Output will be saved in the build/ directory).
+
+
+Build binaries for all platforms (Linux, macOS Intel/Apple Silicon, Windows):
+
+```bash
+make release-all
+```
+
+Clean built files:
+```bash
+make clean
+```
+
+Without Make (Manual Go Build)
+If make is not available on your environment, compile directly using Go:
+
+```bash
+go build -o bin/sota .
+```
 
 ### Usage
 Run the compiled application by pointing it to your QR code image and specifying the desired output file for the extracted URIs:
