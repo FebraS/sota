@@ -46,7 +46,7 @@ sudo pacman -S python-pyzbar python-pillow
 sudo dnf install python3-pyzbar python3-pillow
 ```
 
-### Option B: Via PIP (Windows, macOS, or Linux venv)
+#### Option B: Via PIP (Windows, macOS, or Linux venv)
 If you prefer using pip (or are using a Python virtual environment):
 
 Install Python libraries:
