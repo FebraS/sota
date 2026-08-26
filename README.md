@@ -94,7 +94,7 @@ You can use the provided Makefile to quickly build or clean the project:
 ```bash
 make build
 ```
-(Output will be saved in the build/ directory).
+(Output will be saved in the build directory).
 
 
 Build binaries for all platforms (Linux, macOS Intel/Apple Silicon, Windows):
