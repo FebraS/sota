@@ -15,12 +15,13 @@ Ref:  https://github.com/Authenticator-Extension/Authenticator/blob/dev/src/mode
 
 func ParseMigrationURI(migrationUri string) ([]string, error) {
 	if !strings.HasPrefix(migrationUri, "otpauth-migration:") {
-		return []string{}, nil
+		// Fixing empty string and invalid scheme
+		return nil, fmt.Errorf("invalid migration URI format: scheme must start with otpauth-migration:")
 	}
 
 	urlDecodedUri, err := url.QueryUnescape(migrationUri)
 	if err != nil {
-		return []string{}, err
+		return nil, err
 	}
 
 	parts := strings.Split(urlDecodedUri, "data=")
