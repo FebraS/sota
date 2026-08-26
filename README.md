@@ -145,11 +145,26 @@ go get github.com/febras/sota/otp
 **Example usage:**
 
 ```go
-import "github.com/febras/sota/otp"
+package main
 
-uris, err := otp.ParseMigrationURI("otpauth-migration://offline?data=...")
-if err != nil {
-    // handle error
+import (
+	"fmt"
+	"log"
+
+	"github.com/febras/sota/otp"
+)
+
+func main() {
+	uri := "otpauth-migration://offline?data=..."
+
+	results, err := otp.ParseMigrationURI(uri)
+	if err != nil {
+		log.Fatalf("Error parsing migration URI: %v", err)
+	}
+
+	for _, account := range results {
+		fmt.Println(account)
+	}
 }
 ```
 
