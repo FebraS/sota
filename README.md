@@ -134,6 +134,25 @@ Sota includes several arguments for control and flexibility during execution.
 |`--read <filename.txt>`	| Loads accounts from a custom file instead of accounts.txt. |
 |`--help`	| Displays a brief description of the program and all available arguments. |
 
+## Use as a Go Library
+
+You can use Sota's migration parser as a standalone library in your Go projects:
+
+```bash
+go get github.com/febras/sota/otp
+```
+
+**Example usage:**
+
+```go
+import "github.com/febras/sota/otp"
+
+uris, err := otp.ParseMigrationURI("otpauth-migration://offline?data=...")
+if err != nil {
+    // handle error
+}
+```
+
 ## Contribution
 Contributions are welcome. If you are interested in improving the codebase, adding new features, or fixing bugs, please feel free to open an issue or submit a pull request on the GitHub repository.
 
