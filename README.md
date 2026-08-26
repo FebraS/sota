@@ -22,25 +22,53 @@ Before using Sota, you need to have the following installed on your computer:
 1.  **Go**: To build the application.
 2.  **Python 3**: To run the background scanning script.
 
-You also need to install two Python libraries. Run this command in your terminal:
+You also need to install two Python libraries. Choose the installation method based on your Operating System:
+
+#### Option A: Linux Package Manager (Recommended for Debian/Ubuntu/Kali/Arch)
+Installing dependencies directly via your Linux package manager ensures that all underlying C-libraries (like `libzbar`) are properly configured and avoids system-managed environment restrictions:
+
+* **Debian / Ubuntu / Kali Linux**:
+
 ```bash
-pip install pyzbar pillow
+sudo apt update && sudo apt install -y python3-pyzbar python3-pillow
 ```
 
 **Important Note for Linux Users:** 
 You may need to install the ZBar C-library package on your system before pyzbar can function properly.
-Debian/Ubuntu: 
+
+* **Arch**:
+```bash
+sudo pacman -S python-pyzbar python-pillow
+```
+
+* **Fedora / RHEL**:
+```bash
+sudo dnf install python3-pyzbar python3-pillow
+```
+
+### Option B: Via PIP (Windows, macOS, or Linux venv)
+If you prefer using pip (or are using a Python virtual environment):
+
+Install Python libraries:
+
+```bash
+pip install pyzbar pillow
+```
+Required for PIP users on Linux: You must manually install the ZBar C-library shared package for pyzbar to function:
+
+* **Debian/Ubuntu/Kali:** 
 ```bash
 sudo apt install libzbar0
 ```
-Arch Linux: 
+* **Arch Linux:**
 ```bash
- sudo pacman -S zbar
+sudo pacman -S zbar
 ```
+
 ## Setup and Installation
 1. Clone the RepositoryDownload the project to your local machine:
 ```bash
-git clone [https://github.com/febras/sota.git](https://github.com/febras/sota.git)
+git clone https://github.com/febras/sota.git
 
 cd sota
 ```
